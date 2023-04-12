@@ -1,487 +1,213 @@
 import 'package:flutter/material.dart';
-import 'package:jute/sliderButton.dart';
+import 'package:jute/webBrain.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-Color menuTextColor = Color(0xffC9C9C9);
+Color menuTextColor = const Color(0xffC9C9C9);
 Color selectedModelColor = Colors.blue;
-Color unSelectedModelColor = Color(0xff1E1E1E);
+Color unSelectedModelColor = const Color(0xff1E1E1E);
+Color appBarColor = const Color(0xff010A19);
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+ImageProvider backGroundImage = const AssetImage("images/background.png");
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: neww(),
-    );
-  }
-}
+class ResultPage extends StatefulWidget {
+  final dynamic apiResult;
+  final dynamic image;
 
-class neww extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xff010A19),
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(25.0),
-                child: Image(
-                  height: 40,
-                  width: 40,
-                  image: AssetImage("images/logo.jpg"),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Text("Denta Vision"),
-              )
-            ],
-          ),
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("images/img1.jpeg"),
-            fit: BoxFit.cover,
-          ),
-        ),
-        width: double.infinity,
-        height: double.infinity,
-        child: DrawBoxes(),
-      ),
-    );
-  }
-}
-
-class DrawBoxes extends StatefulWidget {
-  const DrawBoxes({Key? key}) : super(key: key);
+  const ResultPage({Key? key, required this.apiResult, required this.image})
+      : super(key: key);
 
   @override
-  State<DrawBoxes> createState() => _DrawBoxesState();
+  State<ResultPage> createState() => _ResultPageState();
 }
 
-class _DrawBoxesState extends State<DrawBoxes> {
-  int round = 0;
+class _ResultPageState extends State<ResultPage> {
   bool menu = true;
 
-  int selectedModel = 0;
+  int selectedModel = 1;
+  bool selectAll = true;
 
-  dynamic menuList = [false, false, false, false, false, false, false, false];
+  Map<String, List> allBoxes = {};
+  List<Widget> visibleBoxes = [];
 
-  double width = 1000 * 65 / 100 as double;
-  double height = 720 * 65 / 100 as double;
+  void drawBoxes() {
+    // visibleBoxes.clear();
+    for (int i = 0; i < 8; i++) {
+      if (diseasesMenu[i]) {
+        visibleBoxes.addAll(allBoxes[modelsName[selectedModel - 1]]![i]);
+      }
+    }
+    setState(() {
+      visibleBoxes;
+    });
+  }
+
+  List<Widget> diseasesMenuBuilder() {
+    List<Widget> lst = [
+      Center(
+        child: Padding(
+            padding: const EdgeInsets.all(11.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  children: [
+                    Checkbox(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                        side: const BorderSide(color: Color(0xff5A5A5A)),
+                        value: selectAll,
+                        onChanged: (dynamic value) {
+                          setState(() {
+                            selectAll = value;
+                            for (var i = 0; i < diseasesMenu.length; i++) {
+                              diseasesMenu[i] = value;
+                            }
+                          });
+                        }),
+                    Text(
+                      'All',
+                      style: TextStyle(
+                          color: menuTextColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                Text(
+                  "Diseases List",
+                  style: TextStyle(
+                      color: menuTextColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+                GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        menu = !menu;
+                      });
+                    },
+                    child: const Icon(
+                      Icons.remove,
+                      color: Colors.white,
+                    ))
+              ],
+            )),
+      )
+    ];
+    for (var i = 0; i < diseasesList.length; i++) {
+      lst.add(
+        CheckBox(
+          value: diseasesMenu[i],
+          onChange: (dynamic value) {
+            setState(() {
+              diseasesMenu[i] = value;
+            });
+          },
+          color: diseasesListColors[i],
+          label: diseasesList[i],
+        ),
+      );
+    }
+    return lst;
+  }
+
+  List<Widget> modelsMenuBuilder() {
+    List<Widget> lst = [
+      Center(
+        child: Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Text(
+            "Choose model",
+            style: TextStyle(
+                color: menuTextColor,
+                fontSize: 15,
+                fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    ];
+    for (var i = 1; i <= modelsName.length; i++) {
+      lst.add(
+        ModelButton(
+          onTap: () {
+            setState(() {
+              selectedModel = i;
+            });
+          },
+          isSelected: selectedModel == i,
+          buttonLabel: "model $i",
+        ),
+      );
+    }
+    return lst;
+  }
 
   @override
   Widget build(BuildContext context) {
+    allBoxes = boxesBuilder(context, widget.apiResult);
+
+    // screen dimensions
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
+
+    // // image dimensions
+    double width = screenWidth / 2.5;
+    double height = screenHeight / 1.5;
 
     double widthBias = (screenWidth - width) / 2;
     double heightBias = (screenHeight - height) / 2;
 
-    return Stack(children: [
+    visibleBoxes = [
       Container(),
       Positioned(
-        left: width / 2 - 10,
-        top: heightBias - 69,
+        left: widthBias - width / 4,
+        top: heightBias - height / 9,
         child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               color: Color(0xff121214),
               borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(8), topRight: Radius.circular(8))),
-          height: 50,
-          width: width + 116,
+          height: height / 9,
+          width: width + width / 4,
           child: Center(
             child: Text(
-              "Model 2",
-              style: TextStyle(color: Colors.white, fontSize: 25),
+              "Model $selectedModel",
+              style: TextStyle(color: menuTextColor, fontSize: 25),
             ),
           ),
         ),
       ),
       Positioned(
-        left: width / 2 - 10,
-        top: heightBias - 20,
+        left: widthBias - width / 4,
+        top: heightBias,
         child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               color: Color(0xff121214),
               borderRadius: BorderRadius.only(bottomLeft: Radius.circular(8))),
-          width: 140,
+          width: width / 4,
           height: height,
           child: Padding(
             padding: const EdgeInsets.all(2.0),
-            child: ListView(
-              children: [
-                Center(
-                  child: Container(
-                    child: Padding(
-                      padding: const EdgeInsets.all(15.0),
-                      child: Text(
-                        "Choose model",
-                        style: TextStyle(
-                            color: menuTextColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ),
-                ModelButton(
-                  onTap: () {
-                    setState(() {
-                      selectedModel = 1;
-                      print(1);
-                    });
-                  },
-                  isSelected: selectedModel == 1,
-                  buttonLabel: "model 1",
-                ),
-                ModelButton(
-                  onTap: () {
-                    setState(() {
-                      selectedModel = 2;
-                    });
-                  },
-                  isSelected: selectedModel == 2,
-                  buttonLabel: "model 2",
-                ),
-                ModelButton(
-                  onTap: () {
-                    setState(() {
-                      selectedModel = 3;
-                    });
-                  },
-                  isSelected: selectedModel == 3,
-                  buttonLabel: "model 3",
-                ),
-                ModelButton(
-                  onTap: () {
-                    setState(() {
-                      selectedModel = 4;
-                    });
-                  },
-                  isSelected: selectedModel == 4,
-                  buttonLabel: "model 4",
-                )
-              ],
-            ),
+            child: ListView(children: modelsMenuBuilder()),
           ),
         ),
       ),
       Positioned(
         left: widthBias,
-        top: heightBias - 20,
+        top: heightBias,
         child: ClipRRect(
-          child: Image(
-            image: AssetImage("images/t2.jpg"),
+          borderRadius:
+              const BorderRadius.only(bottomRight: Radius.circular(8)),
+          child: Image.memory(
+            widget.image,
+            fit: BoxFit.fill,
             width: width,
             height: height,
           ),
         ),
       ),
       Positioned(
-        left: widthBias + width / 4,
-        top: heightBias + height + 10,
-        child: Row(
-          children: [
-            ArrowButton(
-                icon: Icons.keyboard_arrow_left,
-                onTap: () {
-                  setState(() {
-                    round = (round - 1) % 4;
-                  });
-                }),
-            IndexCircle(
-              isSelected: round == 0,
-            ),
-            IndexCircle(
-              isSelected: round == 1,
-            ),
-            IndexCircle(
-              isSelected: round == 2,
-            ),
-            IndexCircle(
-              isSelected: round == 3,
-            ),
-            ArrowButton(
-                icon: Icons.keyboard_arrow_right,
-                onTap: () {
-                  setState(() {
-                    round = (round + 1) % 4;
-                  });
-                })
-          ],
-        ),
-      ),
-      Visibility(
-        visible: menu,
-        child: Positioned(
-          left: ((widthBias * 2 + width) / 2) + width / 4 + 100,
-          top: heightBias - 40,
-          child: Container(
-            decoration: BoxDecoration(
-                color: Color(0xff121214),
-                borderRadius: BorderRadius.all(Radius.circular(5))),
-            width: 300,
-            height: 415,
-            child: Padding(
-              padding: const EdgeInsets.all(2.0),
-              child: ListView(
-                children: [
-                  Center(
-                    child: Container(
-                      child: Padding(
-                        padding: const EdgeInsets.all(15.0),
-                        child: Text(
-                          "Diseases List",
-                          style: TextStyle(
-                              color: menuTextColor,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A)),
-                        borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(5),
-                            topRight: Radius.circular(5))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4)),
-                              side: BorderSide(color: Color(0xff5A5A5A)),
-                              value: menuList[0],
-                              onChanged: (dynamic value) {
-                                setState(() {
-                                  menuList[0] = value;
-                                });
-                              }),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "Caries",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4)),
-                              side: BorderSide(color: Color(0xff5A5A5A)),
-                              value: menuList[1],
-                              onChanged: (dynamic value) {
-                                setState(() {
-                                  menuList[1] = value;
-                                });
-                              }),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "recurrent caries (RC)",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "remaining root (RR)",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                          SliderButton(
-                            onPress: () {
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "root canal treatment (RCT)",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                          SliderButton(
-                            onPress: () {
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "overhang restoration (OR)",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                          SliderButton(
-                            onPress: () {
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "periapical Lesion (PL)",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                          SliderButton(
-                            onPress: () {
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "URCT",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                          SliderButton(
-                            onPress: () {
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xff1E1E1E),
-                        border: Border.all(color: Color(0xff5A5A5A)),
-                        borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(5),
-                            bottomRight: Radius.circular(5))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Text(
-                              "Crown",
-                              style: TextStyle(color: menuTextColor),
-                            ),
-                          ),
-                          SliderButton(
-                            onPress: () {
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      Positioned(
-        left: 40,
-        top: 30,
+        left: (widthBias + width - width / 8) + (width / 3),
+        top: heightBias - height / 18,
         child: GestureDetector(
           onTap: () {
             setState(() {
@@ -491,96 +217,121 @@ class _DrawBoxesState extends State<DrawBoxes> {
           child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                  color: Colors.white,
+              decoration: const BoxDecoration(
+                  color: Color(0xff121214),
                   borderRadius: BorderRadius.all(Radius.circular(10))),
               child: Icon(
                 Icons.menu,
                 size: 25,
+                color: menuTextColor,
               )),
         ),
       ),
-      Visibility(
-        visible: round == 1,
-        child: Positioned(
-          child: Container(
-            color: Colors.amber,
-            height: 20,
-            width: 50,
+      Positioned(
+        left: screenWidth / 2 - 100,
+        top: heightBias + height,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              Navigator.pop(context);
+            });
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                  decoration: BoxDecoration(
+                      color: selectedModelColor,
+                      borderRadius: BorderRadius.all(Radius.circular(10))),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Text(
+                        'Try another Image',
+                        style: TextStyle(color: menuTextColor),
+                      ),
+                    ),
+                  )),
+            ],
           ),
         ),
       ),
-      Visibility(
-        visible: round == 2,
-        child: Positioned(
-          child: Container(
-            color: Colors.red,
-            height: 20,
-            width: 50,
-          ),
-        ),
-      ),
-    ]);
-  }
-}
+    ];
 
-class IndexCircle extends StatelessWidget {
-  IndexCircle({
-    required this.isSelected,
-  });
+    drawBoxes();
 
-  bool isSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Container(
-        decoration: BoxDecoration(
-            color: isSelected ? Colors.blue : Colors.transparent,
-            border: Border.all(
-              color: Colors.blue,
+    visibleBoxes.add(Visibility(
+      visible: menu,
+      child: Positioned(
+        left: widthBias + width - width / 8,
+        top: heightBias - height / 18,
+        child: Container(
+          decoration: const BoxDecoration(
+              color: Color(0xff121214),
+              borderRadius: BorderRadius.all(Radius.circular(8))),
+          width: width / 2.5,
+          height: height - height / 10,
+          child: Padding(
+            padding: const EdgeInsets.all(2.0),
+            child: ListView(
+              controller: ScrollController(),
+              children: diseasesMenuBuilder(),
             ),
-            borderRadius: BorderRadius.all(Radius.circular(100))),
-        width: 15,
-        height: 15,
+          ),
+        ),
       ),
-    );
-  }
-}
+    ));
 
-class ArrowButton extends StatelessWidget {
-  ArrowButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  IconData icon;
-  Function() onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      padding: const EdgeInsets.all(0),
-      onPressed: onTap,
-      icon: Icon(
-        icon,
-        size: 35,
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: appBarColor,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(25.0),
+                child: const Image(
+                  height: 40,
+                  width: 40,
+                  image: AssetImage("images/logo.png"),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15.0),
+                child: Text("Teeth Vision"),
+              )
+            ],
+          ),
+        ),
       ),
-      color: Colors.white,
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: backGroundImage,
+            fit: BoxFit.cover,
+          ),
+        ),
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(fit: StackFit.expand, children: visibleBoxes),
+      ),
     );
   }
 }
 
 class ModelButton extends StatelessWidget {
-  ModelButton(
-      {required this.onTap,
+  const ModelButton(
+      {Key? key,
+      required this.onTap,
       required this.isSelected,
-      required this.buttonLabel});
+      required this.buttonLabel})
+      : super(key: key);
 
-  Function() onTap;
-  bool isSelected;
-  String buttonLabel;
+  final Function() onTap;
+  final bool isSelected;
+  final String buttonLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -591,7 +342,7 @@ class ModelButton extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: isSelected ? selectedModelColor : unSelectedModelColor,
-            border: Border.all(color: Color(0xff5A5A5A)),
+            border: Border.all(color: const Color(0xff5A5A5A)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -605,6 +356,58 @@ class ModelButton extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class CheckBox extends StatefulWidget {
+  final Color color;
+  final bool value;
+  final void Function(dynamic value) onChange;
+  final String label;
+
+  const CheckBox(
+      {Key? key,
+      required this.color,
+      required this.value,
+      required this.onChange,
+      required this.label})
+      : super(key: key);
+
+  @override
+  State<CheckBox> createState() => _CheckBoxState();
+}
+
+class _CheckBoxState extends State<CheckBox> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+          color: const Color(0xff1E1E1E),
+          border: Border.all(color: const Color(0xff5A5A5A))),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            Checkbox(
+                fillColor: MaterialStateProperty.resolveWith((Set states) {
+                  return widget.color;
+                }),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+                side: const BorderSide(color: Color(0xff5A5A5A)),
+                value: widget.value,
+                onChanged: widget.onChange),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Text(
+                widget.label,
+                style: TextStyle(color: menuTextColor),
+              ),
+            ),
+          ],
         ),
       ),
     );
